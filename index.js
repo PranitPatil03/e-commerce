@@ -3,11 +3,17 @@ const { default: mongoose } = require('mongoose');
 const { createProduct } = require('./controller/Product');
 const server= express();
 
-const productsRoute=require("./routes/Products")
+const productsRouter=require("./routes/Products")
+const categoriesRouter=require("./routes/Categories")
+const brandsRouter=require("./routes/Brands")
 
 server.use(express())
 server.use(express.json());
-server.use("/",productsRoute.router)
+
+server.use('/products', productsRouter.router);
+server.use('/categories', categoriesRouter.router)
+server.use('/brands', brandsRouter.router)
+
 main().catch(err=>console.log(err))
 
 async function main(){
