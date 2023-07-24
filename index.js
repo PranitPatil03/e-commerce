@@ -10,27 +10,28 @@ const brandsRouter = require("./routes/Brands");
 const usersRouter = require("./routes/Users");
 const authRouter = require("./routes/Auth");
 const cartRouter = require("./routes/Cart");
-const orderRouter = require("./routes/Orders");
+const ordersRouter = require("./routes/Order");
+
+//middlewares
 
 server.use(
   cors({
     exposedHeaders: ["X-Total-Count"],
   })
-); 
-
-server.use(express.json());
+);
+server.use(express.json()); 
 server.use("/products", productsRouter.router);
 server.use("/categories", categoriesRouter.router);
 server.use("/brands", brandsRouter.router);
 server.use("/users", usersRouter.router);
 server.use("/auth", authRouter.router);
-server.use('/cart', cartRouter.router)
-server.use('/orders', orderRouter.router)
+server.use("/cart", cartRouter.router);
+server.use("/orders", ordersRouter.router);
 
 main().catch((err) => console.log(err));
 
 async function main() {
-  await mongoose.connect("mongodb://127.0.0.1:27017/ecommerce");
+  await mongoose.connect("mongodb://127.0.0.1:27017/e-commerce");
   console.log("database connected");
 }
 

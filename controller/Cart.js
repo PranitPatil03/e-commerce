@@ -4,6 +4,7 @@ exports.fetchCartByUser = async (req, res) => {
   const { user } = req.query;
   try {
     const cartItems = await Cart.find({ user: user }).populate("product");
+
     res.status(200).json(cartItems);
   } catch (err) {
     res.status(400).json(err);
@@ -37,7 +38,8 @@ exports.updateCart = async (req, res) => {
     const cart = await Cart.findByIdAndUpdate(id, req.body, {
       new: true,
     });
-    const result=await cart.populate("product")
+    const result = await cart.populate("product");
+
     res.status(200).json(result);
   } catch (err) {
     res.status(400).json(err);
