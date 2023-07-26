@@ -61,7 +61,6 @@ passport.use(
   ) {
     try {
       const user = await User.findOne({ email: email });
-      console.log(email, password, user);
       if (!user) {
         return done(null, false, { message: "invalid credentials" }); // for safety
       }
@@ -76,7 +75,7 @@ passport.use(
             return done(null, false, { message: "invalid credentials" });
           }
           const token = jwt.sign(sanitizeUser(user), SECRET_KEY);
-          done(null, {token});
+          done(null, {id:user.id, role:user.role});           
         }
       );
     } catch (err) {
@@ -88,7 +87,6 @@ passport.use(
 passport.use(
   "jwt",
   new JwtStrategy(opts, async function (jwt_payload, done) {
-    console.log({ jwt_payload });
     try {
       const user = await User.findOne({ id: jwt_payload.sub });
       if (user) {
