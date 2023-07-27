@@ -1,7 +1,9 @@
+require('dotenv').config()
 const express = require("express");
 const server = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path= require("path");
 const session = require("express-session");
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
@@ -21,18 +23,47 @@ const ordersRouter = require("./routes/Order");
 const { User } = require("./model/User");
 const { isAuth, sanitizeUser, cookieExtractor } = require("./services/common");
 
-const SECRET_KEY = "SECRET_KEY";
 const opts = {};
-opts.jwtFromRequest = cookieExtractor
-opts.secretOrKey = SECRET_KEY; // should not be in code
+opts.jwtFromRequest = cookieExtractor;
+opts.secretOrKey = process.env.JWT_SECRET_KEY;
 
-server.use(express.static('build'))
+const endpointSecret = process.env.ENDPOINT_SECRET;
+
+server.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+  const sig = request.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+  } catch (err) {
+    response.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntentSucceeded = event.data.object;
+      // Then define and call a function to handle the event payment_intent.succeeded
+      break;
+    // ... handle other event types
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  // Return a 200 response to acknowledge receipt of the event
+  response.send();
+});
+
+
+server.use(express.static(path.resolve(__dirname,"build")));
 server.use(cookieParser());
 //middlewares
 
 server.use(
   session({
-    secret: "keyboard cat",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
   })
@@ -51,6 +82,26 @@ server.use("/users", isAuth(), usersRouter.router);
 server.use("/auth", authRouter.router);
 server.use("/cart", isAuth(), cartRouter.router);
 server.use("/orders", isAuth(), ordersRouter.router);
+
+const stripe = require("stripe")(
+  "sk_test_51NYPU9SIkFNJvsOJWTfv7soLaT2178RKlTQk1UjK4OYjd1pNGiNYsJCcb2cXnZGjlm7fyheqxB2ufW2QWN1odNfA00ZOe2HZdk"
+);
+
+server.post("/create-payment-intent", async (req, res) => {
+  const { totalAmount } = req.body;
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: totalAmount*100,
+    currency: "inr",
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+
+  res.send({
+    clientSecret: paymentIntent.client_secret,
+  });
+});
 
 passport.use(
   "local",
@@ -74,8 +125,8 @@ passport.use(
           if (!crypto.timingSafeEqual(user.password, hashedPassword)) {
             return done(null, false, { message: "invalid credentials" });
           }
-          const token = jwt.sign(sanitizeUser(user), SECRET_KEY);
-          done(null, {id:user.id, role:user.role});           
+          const token = jwt.sign(sanitizeUser(user), process.env.JWT_SECRET_KEY);
+          done(null, { id: user.id, role: user.role });
         }
       );
     } catch (err) {
@@ -117,10 +168,10 @@ passport.deserializeUser(function (user, cb) {
 main().catch((err) => console.log(err));
 
 async function main() {
-  await mongoose.connect("mongodb://127.0.0.1:27017/e-commerce");
+  await mongoose.connect(process.env.MONGODB_URL);
   console.log("database connected");
 }
 
-server.listen(8080, () => {
+server.listen(process.env.PORT, () => {
   console.log("server started");
 });
